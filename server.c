@@ -7,12 +7,13 @@
 #include <string.h>
 #include <unistd.h>
 #include <ctype.h>
+#include "word_counter.h"
 
 #define serverPort 48763
 
-char *convert(char *src) {
+char * convert(char *src) {
     char *iter = src;
-    char *result = malloc(sizeof(*src));
+    char *result = malloc(strlen(src));
     char *it = result;
     if (iter == NULL) return iter;
 
@@ -23,7 +24,7 @@ char *convert(char *src) {
     return result;
 }
 
-int main() {
+int server() {
     char buf[1024] = {0};
 
     int socket_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -65,6 +66,8 @@ int main() {
                 break;
             }
 
+            word_occurrence_count(buf);
+
             char *conv = convert(buf);
 
             printf("get message from [%s:%d]: ", inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port));
@@ -93,6 +96,13 @@ int main() {
         perror("close socket failed!");
     }
 
+
+    return 0;
+}
+
+int main(int argc, char **argv) {
+    // int num_threads = argv[1];
+    server();
 
     return 0;
 }
