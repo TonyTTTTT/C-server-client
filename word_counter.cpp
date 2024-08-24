@@ -11,8 +11,8 @@
 #include <vector>
 #include <omp.h>
 #include <chrono>
-#include <windows.h>
-#include <winnt.h>
+// #include <windows.h>
+// #include <winnt.h>
 #include <atomic>
 
 #include "word_counter.h"
