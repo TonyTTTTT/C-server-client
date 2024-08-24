@@ -1,1 +1,5 @@
 .vscode/
+
+*build/
+
+./directory_big/file1
