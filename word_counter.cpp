@@ -13,6 +13,7 @@
 #include <chrono>
 #include <windows.h>
 #include <winnt.h>
+#include <atomic>
 
 #include "word_counter.h"
 
@@ -67,8 +68,14 @@ void parallel_tokenize_and_count(string &str) {
             // {
             //     occurrence[word]++;
             // }
-            InterlockedIncrement((volatile long *)&occurrence[word]);
 
+            __sync_add_and_fetch(&occurrence[word], 1);
+            // InterlockedIncrement((volatile long *)&occurrence[word]);
+            // atomic<int> *cnt = &occurrence[word];
+            // cnt++;
+            
+            // atomic_fetch_add(occurrence[word], 1);
+            
         }
     }    
 
