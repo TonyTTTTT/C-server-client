@@ -10,6 +10,7 @@
 #include "word_counter.h"
 
 #define serverPort 48763
+#define MAX_PATH_LEN 256
 
 char * convert(char *src) {
     char *iter = src;
@@ -24,8 +25,8 @@ char * convert(char *src) {
     return result;
 }
 
-int server() {
-    char buf[1024] = {0};
+int server(int num_of_threads) {
+    char buf[MAX_PATH_LEN];
 
     int socket_fd = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -56,6 +57,7 @@ int server() {
         struct sockaddr_in clientAddr;
         unsigned int client_len = sizeof(clientAddr);
 
+        printf("========================\nwaiting for client request...\n");
         reply_sockfd = accept(socket_fd, (struct sockaddr *)&clientAddr, &client_len);
         printf("Accept connect request from [%s:%d]\n",
                 inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port));
@@ -66,10 +68,9 @@ int server() {
                 break;
             }
 
-            word_occurrence_count(buf);
-
             char *conv = convert(buf);
 
+            printf("===============================\n");
             printf("get message from [%s:%d]: ", inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port));
             printf("%s -> %s\n", buf, conv);
 
@@ -81,9 +82,13 @@ int server() {
                 break;
             }
 
+            word_occurrence_count(buf, num_of_threads);
+
             memset(buf, 0, sizeof(buf));
             free(conv);
         }
+
+        print_occurrence();
 
         if (close(reply_sockfd) < 0) {
             perror("close socket failed!");
@@ -101,8 +106,10 @@ int server() {
 }
 
 int main(int argc, char **argv) {
-    // int num_threads = argv[1];
-    server();
+    int num_of_threads = atoi(argv[1]);
+    printf("target num_of_threads: %d\n", num_of_threads);
+
+    server(num_of_threads);
 
     return 0;
 }

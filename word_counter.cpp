@@ -11,13 +11,14 @@
 #include <vector>
 #include <omp.h>
 #include <chrono>
-// #include <windows.h>
-// #include <winnt.h>
 #include <atomic>
 
 #include "word_counter.h"
 
 using namespace std;
+
+
+unordered_map<string, int> occurrence;
 
 string read_file(string path) {
     ifstream input_file(path);
@@ -38,14 +39,19 @@ string read_file(string path) {
     return res;
 }
 
-void parallel_tokenize_and_count(string &str) {
-    static unordered_map<string, int> occurrence;
-    // vector<string> words;
-    // vector<string> local_words[omp_get_max_threads()];
+void parallel_tokenize_and_count(string &str, int num_of_threads) {
     int a = 0;
-
+    
+    printf("max threads: %d\n", omp_get_max_threads());
+    // omp_set_dynamic(0);
+    if (num_of_threads > omp_get_max_threads()) {
+        num_of_threads = omp_get_max_threads();
+    }
+    omp_set_num_threads(num_of_threads);
     #pragma omp parallel
     {
+        printf("%d threads executing!\n", omp_get_num_threads());
+
         int thread_id = omp_get_thread_num();
         string local_str;
 
@@ -77,17 +83,20 @@ void parallel_tokenize_and_count(string &str) {
             // atomic_fetch_add(occurrence[word], 1);
             
         }
-    }    
+    }
 
     // for (int i=0; i<omp_get_max_threads(); i++) {
     //     words.insert(words.end(), local_words[i].begin(), local_words[i].end());
     // }
 
-    // for (auto itr : occurrence) {
-    //     printf("%s: %d\n", itr.first, itr.second);
-    // }
-
     return;
+}
+
+void print_occurrence() {
+    printf("==============================\n");
+    for (auto itr : occurrence) {
+        printf("%s: %d\n", itr.first.c_str(), itr.second);
+    }
 }
 
 void tokenize_and_count(string &str) {
@@ -102,10 +111,6 @@ void tokenize_and_count(string &str) {
         // cout << word << endl;
         occurrence[word]++;
     }
-
-    // for (auto itr : occurrence) {
-    //     printf("%s: %d\n", itr.first, itr.second);
-    // }
 
     return;
 }
@@ -130,20 +135,11 @@ void tokenize_and_count(string &str) {
 //     return;
 // }
 
-void word_occurrence_count(char *path) {
+
+
+void word_occurrence_count(char *path, int num_of_threads) {
     string path_str(path);
     string content = read_file(path_str);
-
-    parallel_tokenize_and_count(content);
-}
-
-int main() {
-    char path[] = "./directory_big/file1";
-    string path_str(path);
-    string content = read_file(path_str);
-
-    // word_occurrence_count(path);
-    // word_occurrence_count("./directory_big/file1");
 
     auto startTime = std::chrono::high_resolution_clock::now();
     tokenize_and_count(content);
@@ -151,15 +147,40 @@ int main() {
     std::chrono::duration<double> serialDuration = endTime - startTime;
 
     startTime = std::chrono::high_resolution_clock::now();
-    parallel_tokenize_and_count(content);
+    parallel_tokenize_and_count(content, num_of_threads);
     endTime = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> parallelDuration = endTime - startTime;
 
-    // std::cout << "Serial result: " << resSerial << std::endl;
-    // std::cout << "Parallel result: " << resParallel << std::endl; 
     std::cout << "Serial duration: " << serialDuration.count() << " seconds" << std::endl; 
     std::cout << "Parallel duration: " << parallelDuration.count() << " seconds" << std::endl; 
     std::cout << "Speedup: " << serialDuration.count() / parallelDuration.count() << std::endl; 
-
-    return 0;
 }
+
+// int main() {
+//     char path[] = "./directory_big/file1";
+//     string path_str(path);
+//     string content = read_file(path_str);
+
+//     // word_occurrence_count(path);
+//     // word_occurrence_count("./directory_big/file1");
+
+//     auto startTime = std::chrono::high_resolution_clock::now();
+//     tokenize_and_count(content);
+//     auto endTime = std::chrono::high_resolution_clock::now();
+//     std::chrono::duration<double> serialDuration = endTime - startTime;
+
+//     startTime = std::chrono::high_resolution_clock::now();
+//     parallel_tokenize_and_count(content);
+//     endTime = std::chrono::high_resolution_clock::now();
+//     std::chrono::duration<double> parallelDuration = endTime - startTime;
+
+//     // std::cout << "Serial result: " << resSerial << std::endl;
+//     // std::cout << "Parallel result: " << resParallel << std::endl; 
+//     std::cout << "Serial duration: " << serialDuration.count() << " seconds" << std::endl; 
+//     std::cout << "Parallel duration: " << parallelDuration.count() << " seconds" << std::endl; 
+//     std::cout << "Speedup: " << serialDuration.count() / parallelDuration.count() << std::endl; 
+    
+//     // print_occurrence();
+//     print_occurrence();
+//     return 0;
+// }
