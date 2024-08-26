@@ -36,29 +36,27 @@ void word_occurrence_count(char *path, int num_of_threads) {
     std::chrono::time_point<std::chrono::high_resolution_clock> startTime;
     std::chrono::time_point<std::chrono::high_resolution_clock> endTime;
     std::chrono::duration<double> serialDuration;
-    // if (debug) {
-    //     startTime = std::chrono::high_resolution_clock::now();
-    //     serial_tokenize_and_count(content);
-    //     endTime = std::chrono::high_resolution_clock::now();
-    //     serialDuration = endTime - startTime;
-    // }
+    if (debug) {
+        startTime = std::chrono::high_resolution_clock::now();
+        serial_tokenize_and_count(content);
+        endTime = std::chrono::high_resolution_clock::now();
+        serialDuration = endTime - startTime;
+    }
 
     startTime = std::chrono::high_resolution_clock::now();
     parallel_tokenize_and_count(content, num_of_threads);
     endTime = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> parallelDuration = endTime - startTime;
 
-    printf("Parallel execute duration: %f seconds\n", parallelDuration.count());
-    // if (debug) {
-    //     print_debug("Serial execute duration: %f seconds\n", serialDuration.count());
-    //     print_debug("Parallel execute duration: %f seconds\n", parallelDuration.count()); 
-    //     print_debug("Speedup: %f\n", serialDuration.count() / parallelDuration.count()); 
-    // }
+    if (debug) {
+        print_debug("Serial execute duration: %f seconds\n", serialDuration.count());
+        print_debug("Parallel execute duration: %f seconds\n", parallelDuration.count()); 
+        print_debug("Speedup: %f\n", serialDuration.count() / parallelDuration.count()); 
+    }
 }
 
 string read_file_to_str(string path) {
     ifstream input_file(path);
-    // cout << std::filesystem::current_path() << endl;
     if (!input_file.is_open()) {
         cerr << "Error opening the file: " << path <<endl;
     }
@@ -79,7 +77,10 @@ string read_file_to_str(string path) {
 void prune_word(string& word) {
     // for (auto& c : word) c = tolower(c);
 
-    while (!isalpha(word.back())) word.pop_back();
+    while (!isalpha(word.back())) {
+        word.pop_back();
+        if (word.empty()) return;
+    }
 
     int start = 0;
     while (!isalpha(word[start])) start++;
@@ -113,11 +114,14 @@ void parallel_tokenize_and_count(string &str, int num_of_threads) {
         while (stream >> word) {
             prune_word(word);
 
+            if (word.empty()) continue;
+            
             // critical code for syncronization
             if (occurrence.count(word)) {
                 auto addr = &occurrence[word];
                 __sync_add_and_fetch(addr, 1);
             } else {
+                // if word haven't occur in map, using __sync_add_and_fetch() will crash the map
                 #pragma omp critical
                 {
                     auto itr = occurrence.insert({word, 1});
@@ -135,6 +139,8 @@ void serial_tokenize_and_count(string &str) {
     while (stream >> word) {
         prune_word(word);
 
+        if (word.empty()) continue;
+
         occurrence_for_serial[word]++;
     }
 }
@@ -143,12 +149,10 @@ void print_occurrence() {
     printf("%sWord Occurrence among all files:\n%s", SEP_LINE, SEP_LINE);
 
     map<string, int> ordered_occurrence(occurrence.begin(), occurrence.end());
-    printf("transform to ordered map!\n");
     for (auto itr : ordered_occurrence) {
         printf("%s: %d\n", itr.first.c_str(), itr.second);
     }
-    printf("complete print map\n");
+
     occurrence.clear();
     occurrence_for_serial.clear();
-    printf("complete print_occurrence()\n");
 }

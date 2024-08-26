@@ -61,6 +61,7 @@ int server(int num_of_threads) {
         printf("Accept connect request from [%s:%d]\n",
                 inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port));
 
+        int files_cnt = 0;
         while (recv(reply_sockfd, buf, sizeof(buf), 0)) {
             if (strcmp(buf, "exit") == 0) {
                 memset(&buf, 0, sizeof(buf));
@@ -87,9 +88,12 @@ int server(int num_of_threads) {
 
             memset(&buf, 0, sizeof(buf));
             free(respond);
+            files_cnt++;
         }
 
         print_occurrence();
+
+        printf("%s%d files been count.\n", SEP_LINE, files_cnt);
 
         if (close(reply_sockfd) < 0) {
             perror("Close socket failed!");
