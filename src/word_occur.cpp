@@ -26,8 +26,8 @@ void parallel_tokenize_and_count(string &str, int num_of_threads);
 void serial_tokenize_and_count(string &str);
 void print_occurrence();
 
-static map<string, int> occurrence;
-static map<string, int> occurrence_for_serial;
+static unordered_map<string, int> occurrence;
+static unordered_map<string, int> occurrence_for_serial;
 
 void word_occurrence_count(char *path, int num_of_threads) {
     string path_str(path);
@@ -44,13 +44,11 @@ void word_occurrence_count(char *path, int num_of_threads) {
     // }
 
     startTime = std::chrono::high_resolution_clock::now();
-    // parallel_tokenize_and_count(content, num_of_threads);
+    parallel_tokenize_and_count(content, num_of_threads);
     endTime = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> parallelDuration = endTime - startTime;
-    
-    parallel_tokenize_and_count(content, num_of_threads);
 
-    print_debug("Parallel execute duration: %f seconds\n", parallelDuration.count());
+    printf("Parallel execute duration: %f seconds\n", parallelDuration.count());
     // if (debug) {
     //     print_debug("Serial execute duration: %f seconds\n", serialDuration.count());
     //     print_debug("Parallel execute duration: %f seconds\n", parallelDuration.count()); 
@@ -115,9 +113,17 @@ void parallel_tokenize_and_count(string &str, int num_of_threads) {
         while (stream >> word) {
             prune_word(word);
 
-            auto addr = &occurrence[word];
-
-            __sync_add_and_fetch(addr, 1);
+            // critical code for syncronization
+            if (occurrence.count(word)) {
+                auto addr = &occurrence[word];
+                __sync_add_and_fetch(addr, 1);
+            } else {
+                #pragma omp critical
+                {
+                    auto itr = occurrence.insert({word, 1});
+                    if (!itr.second) occurrence[word]++;
+                }
+            }
         }
     }
 }
@@ -136,9 +142,9 @@ void serial_tokenize_and_count(string &str) {
 void print_occurrence() {
     printf("%sWord Occurrence among all files:\n%s", SEP_LINE, SEP_LINE);
 
-    // map<string, int> ordered_occurrence(occurrence.begin(), occurrence.end());
-    // printf("transform to ordered map!\n");
-    for (auto itr : occurrence) {
+    map<string, int> ordered_occurrence(occurrence.begin(), occurrence.end());
+    printf("transform to ordered map!\n");
+    for (auto itr : ordered_occurrence) {
         printf("%s: %d\n", itr.first.c_str(), itr.second);
     }
     printf("complete print map\n");
