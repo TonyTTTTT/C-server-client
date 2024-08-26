@@ -9,12 +9,48 @@
 #include <dirent.h>
 #include <time.h>
 
-#define serverPort 48763
-#define serverIP "127.0.0.1"
-#define MAX_PATH_LEN 256
+#include "util.h"
 
+char ** find_targeted_files(char *name, time_t target_time, char **files_path, int *path_cnt);
+int start_connection(struct sockaddr_in serverAddr);
+int send_to_server(int socket_fd, char *buf);
+void close_connection(int socket_fd);
 
-char ** traverse_directory(char *name, time_t target_time, char **files_path, int *path_cnt) {
+int main(int argc, char **argv) {
+    char* target_dir = argv[1];
+    printf("%sTarget dir: %s\n", SEP_LINE, target_dir);
+
+    time_t target_time = atoi(argv[2]);
+    char target_time_buff[100];
+    strftime(target_time_buff, sizeof(target_time_buff), "%Y-%m-%d %H:%M:%S", localtime(&target_time));
+    printf("Target time: %s\n%s", target_time_buff, SEP_LINE);
+
+    int *path_cnt = malloc(sizeof(int));
+    *path_cnt = 0;
+    char **files_path = malloc(0);
+
+    files_path = find_targeted_files(target_dir, target_time, files_path, path_cnt);
+
+    struct sockaddr_in serverAddr = {
+        .sin_family = AF_INET,
+        .sin_port = htons(serverPort),
+        .sin_addr.s_addr = inet_addr(serverIP),
+    };
+
+    print_debug("\n\n");
+    int socket_fd = start_connection(serverAddr);
+
+    for (int i=0; i<*path_cnt; i++) {
+        send_to_server(socket_fd, files_path[i]);
+    }
+
+    print_debug("%s\n", SEP_LINE);
+    close_connection(socket_fd);
+
+    return 0;
+}
+
+char ** find_targeted_files(char *name, time_t target_time, char **files_path, int *path_cnt) {
     DIR *dir;
     struct dirent *ent;
     struct stat states;
@@ -22,10 +58,9 @@ char ** traverse_directory(char *name, time_t target_time, char **files_path, in
     dir = opendir(name);
     if (!dir) {
         perror(name);
-        return;
+        return NULL;
     }
 
-    // printf("%10s %25s %15s %8s %25s %-s\n", "d_ino", "d_off", "d_reclen", "len", "last modified time", "filename");
     while ((ent=readdir(dir)) != NULL) {
         if (strcmp(ent->d_name, ".")==0 || strcmp(ent->d_name, "..")==0) continue;
 
@@ -43,26 +78,23 @@ char ** traverse_directory(char *name, time_t target_time, char **files_path, in
         char date[80];
         strftime(date, sizeof(date), "%Y-%m-%d %H:%M:%S", localtime(&states.st_ctime));
 
-        // printf("%10lu %25ld %15u %8ld %25s %-s\n", ent->d_ino, ent->d_off, ent->d_reclen, strlen(ent->d_name), date, full_path);
-        printf("%20s %-s\n", "last modified time", "filename");
-        printf("%20s %-s\n\n", date, full_path);
+        print_debug("%20s | %-s\n", "Last Modified Time", "Filename");
+        print_debug("%20s | %-s\n\n", date, full_path);
 
         if (states.st_ctime > target_time && ent->d_type != DT_DIR) {
-            printf("is file & modified after target time!\n");
-
-            // send_to_server(full_path);
+            print_debug("Is file & modified after target time!\n");
 
             files_path = realloc(files_path, (*path_cnt+1) * sizeof(full_path));
             files_path[*path_cnt] = malloc(sizeof(full_path));
             strcpy(files_path[*path_cnt], full_path);
             (*path_cnt)++;
         }
-        printf("========================\n");
+        print_debug(SEP_LINE);
 
-        if (ent->d_type == DT_DIR) files_path = traverse_directory(full_path, target_time, files_path, path_cnt);
+        if (ent->d_type == DT_DIR) files_path = find_targeted_files(full_path, target_time, files_path, path_cnt);
     }
 
-    close(dir);
+    close(*((int*)dir));
 
     return files_path;
 }
@@ -70,14 +102,14 @@ char ** traverse_directory(char *name, time_t target_time, char **files_path, in
 int start_connection(struct sockaddr_in serverAddr) {
     int socket_fd = socket(PF_INET, SOCK_STREAM, 0);
     if (socket_fd < 0) {
-        printf("Create socket fail!\n");
+        perror("Create socket fail!");
         return -1;
     }
 
     int len = sizeof(serverAddr);
 
     if (connect(socket_fd, (struct sockaddr *)&serverAddr, len) == -1) {
-        printf("Connect server failed\n");
+        perror("Connect server failed");
         close(socket_fd);
         exit(0);
     }
@@ -97,63 +129,31 @@ int send_to_server(int socket_fd, char *buf) {
 
     char recvbuf[MAX_PATH_LEN] = {0};
     
-    printf("==============================\n");
-    printf("path to be send: %s\n", buf);
+    print_debug(SEP_LINE);
+    print_debug("Send path: %s\n", buf);
 
     if (send(socket_fd, buf, strlen(buf), 0) < 0) {
-        printf("send data to %s:%d, failed!\n",
+        printf("Send data to %s:%d, failed!\n",
                 inet_ntoa(serverAddr.sin_addr), ntohs(serverAddr.sin_port));
     }
 
-    memset(buf, 0, sizeof(buf));
+    memset(&buf, 0, sizeof(buf));
 
     if (recv(socket_fd, recvbuf, sizeof(recvbuf), 0) < 0) {
-        printf("recv data from %s:%d, failed!\n",
+        printf("Receive data from %s:%d, failed!\n",
                 inet_ntoa(serverAddr.sin_addr), ntohs(serverAddr.sin_port));
     }
 
-    printf("get receive message from [%s:%d] : %s\n",
+    print_debug("Receive message from [%s:%d] : %s\n",
             inet_ntoa(serverAddr.sin_addr), ntohs(serverAddr.sin_port), recvbuf);
-    memset(recvbuf, 0, sizeof(recvbuf));
+    memset(&recvbuf, 0, sizeof(recvbuf));
 
     return 0;
 }
 
 void close_connection(int socket_fd) {
     if (close(socket_fd) < 0) {
-        perror("close socket failed!");
+        perror("Close socket failed!");
     }
-}
-
-int main(int argc, char **argv) {
-    char path_buf[100] = "./directory_big";
-    printf("path: %s\n", path_buf);
-    // scanf("%s", path_buf);
-
-    time_t target_time = 1724157950;
-    char target_time_buff[100];
-    strftime(target_time_buff, sizeof(target_time_buff), "%Y-%m-%d %H:%M:%S", localtime(&target_time));
-    printf("target_time: %s\n=========================\n", target_time_buff);
-
-    int *path_cnt = malloc(sizeof(int));
-    *path_cnt = 0;
-    char **files_path = malloc(0);
-
-    files_path = traverse_directory(path_buf, target_time, files_path, path_cnt);
-
-    struct sockaddr_in serverAddr = {
-        .sin_family = AF_INET,
-        .sin_port = htons(serverPort),
-        .sin_addr.s_addr = inet_addr(serverIP),
-    };
-
-    int socket_fd = start_connection(serverAddr);
-
-    for (int i=0; i<*path_cnt; i++) {
-        send_to_server(socket_fd, files_path[i]);
-    }
-
-    close_connection(socket_fd);
-
-    return 0;
+    printf("Close socket success\n");
 }

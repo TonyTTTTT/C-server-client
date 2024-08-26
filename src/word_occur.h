@@ -1,5 +1,5 @@
-#ifndef _B_H_
-#define _B_H_
+#ifndef WORD_OCCUR_H
+#define WORD_OCCUR_H
 
 #ifdef __cplusplus
 extern "C" {
