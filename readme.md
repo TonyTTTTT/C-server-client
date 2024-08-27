@@ -1,7 +1,6 @@
 # Readme
 ## Requirement
-![image](https://hackmd.io/_uploads/H1AjOh9sA.png)
-
+![image](https://github.com/user-attachments/assets/0ba1d9cb-0430-4dc4-b3b8-c9f472e7506d)
 
 
 ### Design
@@ -28,7 +27,7 @@
 
 
 - 達成syncronization關鍵的code (in *word_occur.cpp*)
-![image](https://hackmd.io/_uploads/Hk8Kr8coA.png)
+![image](https://github.com/user-attachments/assets/30ef2b2e-8c0a-4bdd-b36e-e41d3837f687)
     - Syncronization problem when writing into unordered_map: 不同threads同時要寫入同個key對應位址的情形
 
 
@@ -44,13 +43,12 @@
 ### Run
 1. run server
     - `./server 5`
-    ![image](https://hackmd.io/_uploads/rJRLS25i0.png)
+        - ![image](https://github.com/user-attachments/assets/542ae0a3-0448-4c4d-b91d-e2ccd8d18b73)
 
 3. run client
     - `./client ./directory_big 1724050390`
-    ![image](https://hackmd.io/_uploads/Bk4pShqsA.png)
-    ![image](https://hackmd.io/_uploads/r1rMBhcoC.png)
-
+        - ![image](https://github.com/user-attachments/assets/31a2684e-5829-4dd7-acd2-ecfbf42393c8)
+        - ![image](https://github.com/user-attachments/assets/58e502c9-4b9f-495d-b6ef-bd203b73e767)
 
 
 ## Complexity
@@ -89,6 +87,6 @@
 - server使用port=48763，若該port已被使用將無法正常運行
 - if `static bool debug = true;` in *util.h*
     - Also counting occurrence in serial and compare with parallel regarding time consuming
-    ![image](https://hackmd.io/_uploads/Skz-dn5iR.png)
+    ![image](https://github.com/user-attachments/assets/ed60f293-4cc3-4742-b9af-75fc2c92c282)
         - 文字檔足夠大的時候，parallel才會比serial快
     - More information will be print for analysis
