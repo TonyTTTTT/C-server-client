@@ -21,6 +21,7 @@
 - Server Parallel處理方式
     - 一次只處理一個file，將files中的內容平均分給所有threads處理
         - 以此種方式平行處理，可以確保各個thread的loading是幾乎一樣的
+    - 使用OpenMP達成parallel
 
 
 - 統計時用unordered_map以獲得更好的效率，output時轉換成map以增加可讀性(ordered)
