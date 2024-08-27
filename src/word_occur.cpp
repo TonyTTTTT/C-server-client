@@ -115,7 +115,7 @@ void parallel_tokenize_and_count(string &str, int num_of_threads) {
             prune_word(word);
 
             if (word.empty()) continue;
-            
+
             // critical code for syncronization
             if (occurrence.count(word)) {
                 auto addr = &occurrence[word];
@@ -125,6 +125,9 @@ void parallel_tokenize_and_count(string &str, int num_of_threads) {
                 #pragma omp critical
                 {
                     auto itr = occurrence.insert({word, 1});
+                    // there might be case when one thread enter this critical region right 
+                    // after another one with the same word, so we still need to check if 
+                    // word already exist in occurrence in this case, we still need to add it by one
                     if (!itr.second) occurrence[word]++;
                 }
             }
