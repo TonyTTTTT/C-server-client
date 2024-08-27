@@ -35,12 +35,14 @@
 ## How to run
 - working in root dir
 ### Build
-- build client
-    - `gcc ./src/client.c -o ./client`
-- build server
-    - `gcc ./src/server.c -c -fopenmp -o ./out/server.o`
-    - `g++ ./src/word_occur.cpp -c -fopenmp -o ./out/word_occur.o`
-    - `g++ ./out/server.o ./out/word_occur.o -fopenmp -o ./server`
+- manual build each file
+    - build client
+        - `gcc ./src/client.c -o ./client`
+    - build server
+        - `gcc ./src/server.c -c -fopenmp -o ./out/server.o`
+        - `g++ ./src/word_occur.cpp -c -fopenmp -o ./out/word_occur.o`
+        - `g++ ./out/server.o ./out/word_occur.o -fopenmp -o ./server`
+- simply `make`
 ### Run
 1. run server
     - `./server 5`
