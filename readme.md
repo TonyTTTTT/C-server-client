@@ -84,6 +84,7 @@
 
 
 ## Notice
+- Assume to run in linux environment
 - server使用port=48763，若該port已被使用將無法正常運行
 - if `static bool debug = true;` in *util.h*
     - Also counting occurrence in serial and compare with parallel regarding time consuming
